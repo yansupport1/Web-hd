@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jernih: HD-kan foto dan video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#15122E; --surface:#1F1B45; --surface-2:#2A2560; --ink:#F4F1FF; --muted:#ADA7DA;
+  --line:#3D3775; --accent:#FF4F9A; --accent-ink:#1A0B2E; --danger:#FF9C9C;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:20px 18px 88px}
+header{display:flex;align-items:center;gap:10px}
+.brand{font:700 1.1rem/1 'Unbounded',system-ui,sans-serif;letter-spacing:-.01em}
+h1{font:700 clamp(1.75rem,7.2vw,2.75rem)/1.14 'Unbounded',system-ui,sans-serif;letter-spacing:-.02em;margin:34px 0 14px}
+.lead{margin:0 0 26px;color:var(--muted);max-width:50ch;font-size:1.05rem}
+h2{font:600 .95rem/1.2 'Unbounded',system-ui,sans-serif;margin:0 0 12px;padding:0}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+legend{padding:0}
+
+/* Pembanding geser (dipakai di demo dan di hasil) */
+.compare{position:relative;overflow:hidden;border-radius:24px;background:var(--surface);--pos:50%;touch-action:pan-y;border:1px solid var(--line)}
+.compare img,.compare canvas{display:block;width:100%;height:auto}
+.compare .before{position:absolute;inset:0;height:100%;image-rendering:pixelated;clip-path:inset(0 calc(100% - var(--pos)) 0 0)}
+.compare input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize}
+.compare:focus-within{outline:3px solid var(--ink);outline-offset:3px}
+.handle{position:absolute;top:0;bottom:0;left:var(--pos);width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 1px rgba(21,18,46,.5);pointer-events:none}
+.handle::after{content:"‹ ›";position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#fff;color:var(--accent-ink);display:grid;place-items:center;font:700 15px/1 'Figtree',sans-serif;letter-spacing:2px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.dims{display:flex;justify-content:space-between;gap:12px;margin:10px 4px 0;color:var(--muted);font-size:.9rem}
+.hint{margin:8px 4px 0;color:var(--muted);font-size:.88rem}
+
+/* Kartu alat */
+.card{margin-top:34px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:20px 16px 22px}
+@media(min-width:640px){.card{padding:28px}}
+.block{margin-top:26px}
+.block:first-child{margin-top:0}
+
+.drop{
+  display:block;position:relative;text-align:center;cursor:pointer;
+  border:2px dashed var(--line);border-radius:16px;padding:28px 16px;background:var(--bg);
+  transition:border-color .15s,background .15s;
+}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--surface-2)}
+.drop:focus-within{outline:3px solid var(--ink);outline-offset:3px}
+.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.drop svg{display:block;margin:0 auto 10px;color:var(--accent)}
+.drop:has(.preview.on) svg{display:none}
+.drop strong{display:block;font:600 1rem/1.35 'Figtree',sans-serif;word-break:break-word}
+.drop #drop-sub{color:var(--muted);font-size:.92rem}
+.preview{display:none;margin:0 auto 14px;max-width:100%;max-height:240px;border-radius:12px;background:var(--surface)}
+.preview.on{display:block}
+
+/* Pilihan kualitas */
+.modes{display:grid;gap:10px}
+.mode{
+  position:relative;display:grid;grid-template-columns:84px 1fr;column-gap:12px;row-gap:2px;align-items:center;
+  background:var(--bg);border:2px solid var(--line);border-radius:16px;padding:14px 44px 14px 14px;cursor:pointer;
+}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode::before{content:"";position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--line)}
+.mode:has(input:checked){border-color:var(--accent);background:var(--surface-2)}
+.mode:has(input:checked)::before{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--surface-2)}
+.mode:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
+.mode:has(input:disabled){opacity:.5;cursor:not-allowed}
+.mode .size{grid-row:1/3;font:700 1.15rem/1.1 'Unbounded',system-ui,sans-serif;color:var(--accent)}
+.mode b{font:600 1rem/1.3 'Figtree',sans-serif}
+.mode small{color:var(--muted);font-size:.86rem;line-height:1.45}
+.tag{display:inline-block;margin-left:8px;padding:1px 9px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:700 .72rem/1.7 'Figtree',sans-serif;vertical-align:2px}
+@media(min-width:640px){
+  .modes{grid-template-columns:repeat(3,1fr)}
+  .mode{display:block;padding:16px 16px 18px}
+  .mode .size{display:block;margin:6px 0 10px;font-size:1.5rem}
+  .mode small{display:block;margin-top:6px}
+}
+.note{margin:10px 0 0;color:var(--muted);font-size:.9rem}
+
+.opts{display:grid;gap:12px;margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.opts[hidden]{display:none}
+.opts label{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:500}
+select{font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:8px 10px;min-height:44px}
+select:focus-visible,input[type=checkbox]:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
+
+.btn{
+  display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;margin-top:26px;
+  border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);text-decoration:none;
+  font:700 1.05rem/1 'Figtree',system-ui,sans-serif;cursor:pointer;
+}
+.btn:hover{filter:brightness(1.08)}
+.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.btn:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;filter:none}
+
+/* Status, galat, hasil */
+.status{margin-top:22px}
+.status[hidden],.result[hidden],.err[hidden]{display:none}
+.status p{margin:0 0 8px;font-weight:500}
+.bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .2s}
+.bar.wait i{width:35%;animation:slide 1.2s ease-in-out infinite alternate}
+@keyframes slide{from{margin-left:0}to{margin-left:65%}}
+.err{margin-top:18px;padding:12px 16px;border:2px solid var(--danger);border-radius:14px;color:var(--danger);background:var(--surface);font-weight:500}
+.result{margin-top:34px}
+.vids{display:grid;gap:16px}
+.vids figure{margin:0}
+.vids video{display:block;width:100%;border-radius:16px;background:#000}
+.vids figcaption{margin-top:6px;color:var(--muted);font-size:.92rem}
+
+@media (prefers-reduced-motion:reduce){
+  .drop,.bar i{transition:none}
+  .bar.wait i{animation:none;width:100%}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="2" fill="#F4F1FF"/><rect x="12" y="1" width="9" height="9" rx="2" fill="#F4F1FF"/><rect x="1" y="12" width="9" height="9" rx="2" fill="#F4F1FF"/><rect x="12" y="12" width="9" height="9" rx="2" fill="#FF4F9A"/></svg>
+    <span class="brand">Jernih</span>
+  </header>
+
+  <h1>Foto dan video buram jadi tajam.</h1>
+  <p class="lead">Pilih HD biasa, UHD, atau HD asli dengan AI. Unggah, tunggu sebentar, lalu unduh hasilnya.</p>
+
+  <div class="compare" id="demo" style="--pos:50%">
+    <canvas id="demo-sharp" width="960" height="600" role="img" aria-label="Contoh gambar matahari terbenam di atas pegunungan, versi tajam"></canvas>
+    <canvas id="demo-pixel" class="before" width="960" height="600" aria-hidden="true"></canvas>
+    <input type="range" min="0" max="100" value="50" aria-label="Geser untuk membandingkan gambar buram dan tajam">
+    <span class="handle"></span>
+  </div>
+  <p class="dims"><span>Kiri: 64×40 piksel</span><span>Kanan: 960×600 piksel</span></p>
+  <p class="hint">Contoh gambar buatan. Geser untuk melihat bedanya.</p>
+
+  <div class="card">
+    <section class="block" aria-labelledby="h-file">
+      <h2 id="h-file">Berkas</h2>
+      <label class="drop" id="drop">
+        <img class="preview" id="pv-img" alt="Pratinjau foto">
+        <video class="preview" id="pv-vid" muted playsinline></video>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <strong id="drop-title">Pilih foto atau video</strong>
+        <span id="drop-sub">atau seret berkas ke sini. Maksimal 100 MB.</span>
+        <input type="file" id="file" accept="image/*,video/*" aria-label="Pilih foto atau video">
+      </label>
+    </section>
+
+    <section class="block">
+      <fieldset>
+        <legend><h2>Kualitas</h2></legend>
+        <div class="modes">
+          <label class="mode">
+            <input type="radio" name="mode" value="hd" checked>
+            <span class="size">1080p</span>
+            <b>HD biasa</b>
+            <small>Cepat, diproses di server tanpa AI.</small>
+          </label>
+          <label class="mode">
+            <input type="radio" name="mode" value="uhd">
+            <span class="size">2160p</span>
+            <b>UHD</b>
+            <small>Ukuran 4K. Detail baru tidak ditambahkan.</small>
+          </label>
+          <label class="mode">
+            <input type="radio" name="mode" value="ai" id="mode-ai">
+            <span class="size">4×</span>
+            <b>HD asli<span class="tag">API AI</span></b>
+            <small>AI memulihkan detail yang hilang. Paling tajam, paling lama, berbayar per pemakaian.</small>
+          </label>
+        </div>
+        <p class="note" id="ai-note" hidden>HD asli belum aktif. Isi REPLICATE_API_TOKEN di file .env server.</p>
+      </fieldset>
+
+      <div class="opts" id="opt-img" hidden>
+        <label>Perbesar foto
+          <select id="scale"><option value="4" selected>4×</option><option value="2">2×</option></select>
+        </label>
+        <label>Perbaiki wajah
+          <input type="checkbox" id="face">
+        </label>
+      </div>
+      <div class="opts" id="opt-vid" hidden>
+        <label>Resolusi video
+          <select id="res"><option value="FHD" selected>Full HD (1080p)</option><option value="2k">2K</option><option value="4k">4K</option></select>
+        </label>
+      </div>
+
+      <button class="btn" id="go" type="button" disabled>Tingkatkan kualitas</button>
+    </section>
+
+    <div class="status" id="status" role="status" aria-live="polite" hidden>
+      <p id="status-text"></p>
+      <div class="bar" id="bar"><i></i></div>
+    </div>
+    <div class="err" id="err" role="alert" hidden></div>
+  </div>
+
+  <section class="result" id="result" hidden aria-labelledby="h-res">
+    <h2 id="h-res">Hasil</h2>
+    <div id="result-body"></div>
+  </section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const el = {
+  file: $('#file'), drop: $('#drop'), pvImg: $('#pv-img'), pvVid: $('#pv-vid'),
+  title: $('#drop-title'), sub: $('#drop-sub'), go: $('#go'),
+  status: $('#status'), statusText: $('#status-text'), bar: $('#bar'),
+  err: $('#err'), result: $('#result'), body: $('#result-body'),
+  optImg: $('#opt-img'), optVid: $('#opt-vid'), aiNote: $('#ai-note'),
+};
+let file = null, previewUrl = null, busy = false, maxMb = 100;
+
+fetch('/api/config').then((r) => r.json()).then((c) => {
+  maxMb = c.maxMb || 100;
+  el.sub.textContent = 'atau seret berkas ke sini. Maksimal ' + maxMb + ' MB.';
+  if (!c.ai) { $('#mode-ai').disabled = true; el.aiNote.hidden = false; }
+}).catch(() => {});
+
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm|mkv|avi|3gp)$/i, IMAGE_EXT = /\.(jpe?g|png|webp|gif|bmp|tiff?)$/i;
+const isVideo = () => file && (file.type.startsWith('video/') || (!file.type.startsWith('image/') && VIDEO_EXT.test(file.name)));
+const mode = () => document.querySelector('input[name=mode]:checked').value;
+const size = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+
+function showErr(msg) { el.err.textContent = msg; el.err.hidden = false; }
+function setStatus(text, pct) {
+  el.status.hidden = false;
+  el.statusText.textContent = text;
+  el.bar.classList.toggle('wait', pct == null);
+  el.bar.firstElementChild.style.width = pct == null ? '' : pct + '%';
+}
+
+function updateOptions() {
+  const ai = mode() === 'ai';
+  el.optImg.hidden = !(ai && file && !isVideo());
+  el.optVid.hidden = !(ai && isVideo());
+}
+document.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener('change', updateOptions));
+
+function setFile(f) {
+  if (!f) return;
+  el.err.hidden = true;
+  if (!/^(image|video)\//.test(f.type) && !VIDEO_EXT.test(f.name) && !IMAGE_EXT.test(f.name)) return showErr('Pilih berkas foto atau video.');
+  if (f.size > maxMb * 1048576) return showErr('Berkas terlalu besar. Maksimal ' + maxMb + ' MB.');
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  file = f;
+  previewUrl = URL.createObjectURL(f);
+  el.pvImg.classList.remove('on'); el.pvVid.classList.remove('on');
+  if (isVideo()) { el.pvVid.src = previewUrl; el.pvVid.classList.add('on'); }
+  else { el.pvImg.src = previewUrl; el.pvImg.classList.add('on'); }
+  el.title.textContent = f.name;
+  el.sub.textContent = size(f.size) + '. Ketuk untuk mengganti.';
+  el.result.hidden = true;
+  el.go.disabled = busy;
+  updateOptions();
+}
+
+el.file.addEventListener('change', () => setFile(el.file.files[0]));
+['dragenter', 'dragover'].forEach((t) => el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach((t) => el.drop.addEventListener(t, (e) => { e.preventDefault(); el.drop.classList.remove('over'); }));
+el.drop.addEventListener('drop', (e) => setFile(e.dataTransfer.files[0]));
+
+function fail(msg) {
+  busy = false; el.go.disabled = !file; el.status.hidden = true; showErr(msg);
+}
+
+function run() {
+  if (!file || busy) return;
+  busy = true; el.go.disabled = true; el.err.hidden = true; el.result.hidden = true;
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('mode', mode());
+  fd.append('scale', $('#scale').value);
+  fd.append('face', $('#face').checked);
+  fd.append('resolution', $('#res').value);
+  setStatus('Mengunggah 0%', 0);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/enhance');
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) { const p = Math.round((e.loaded / e.total) * 100); setStatus('Mengunggah ' + p + '%', p); }
+  };
+  xhr.upload.onload = () => setStatus('Memproses. Video panjang bisa butuh beberapa menit.', null);
+  xhr.onerror = () => fail('Tidak bisa terhubung ke server. Cek koneksi lalu coba lagi.');
+  xhr.onload = () => {
+    let d = {};
+    try { d = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status !== 200 || !d.id) return fail(d.error || 'Gagal memulai proses.');
+    poll(d.id, Date.now());
+  };
+  xhr.send(fd);
+}
+el.go.addEventListener('click', run);
+
+async function poll(id, t0) {
+  try {
+    const r = await fetch('/api/jobs/' + id);
+    const d = await r.json();
+    if (d.status === 'done') return finish(d.url);
+    if (d.status === 'error' || !r.ok) return fail(d.error || 'Proses gagal.');
+    setStatus('Memproses. Sudah ' + Math.round((Date.now() - t0) / 1000) + ' detik.', null);
+  } catch { /* koneksi putus sebentar, coba lagi */ }
+  setTimeout(() => poll(id, t0), 2000);
+}
+
+function finish(url) {
+  busy = false; el.go.disabled = false; el.status.hidden = true;
+  const ext = url.split('.').pop().split('?')[0];
+  const dl = '<a class="btn" href="' + url + '" download="jernih-hasil.' + ext + '">Unduh hasil</a>';
+  if (isVideo()) {
+    el.body.innerHTML =
+      '<div class="vids">' +
+      '<figure><video controls playsinline src="' + previewUrl + '" id="vb"></video><figcaption id="db">Asli</figcaption></figure>' +
+      '<figure><video controls playsinline src="' + url + '" id="va"></video><figcaption id="da">Hasil</figcaption></figure>' +
+      '</div>' + dl;
+    $('#vb').onloadedmetadata = (e) => { $('#db').textContent = 'Asli ' + e.target.videoWidth + '×' + e.target.videoHeight; };
+    $('#va').onloadedmetadata = (e) => { $('#da').textContent = 'Hasil ' + e.target.videoWidth + '×' + e.target.videoHeight; };
+  } else {
+    el.body.innerHTML =
+      '<div class="compare" id="cmp">' +
+      '<img class="after" id="ia" src="' + url + '" alt="Foto hasil">' +
+      '<img class="before" id="ib" src="' + previewUrl + '" alt="Foto asli">' +
+      '<input type="range" min="0" max="100" value="50" aria-label="Geser untuk membandingkan foto asli dan hasil">' +
+      '<span class="handle"></span></div>' +
+      '<p class="dims"><span id="db">Asli</span><span id="da">Hasil</span></p>' +
+      '<p class="hint">Geser ke kiri atau kanan. Sisi kiri memperlihatkan piksel foto asli.</p>' + dl;
+    $('#cmp input').addEventListener('input', (e) => $('#cmp').style.setProperty('--pos', e.target.value + '%'));
+    $('#ib').onload = (e) => { $('#db').textContent = 'Asli ' + e.target.naturalWidth + '×' + e.target.naturalHeight; };
+    $('#ia').onload = (e) => { $('#da').textContent = 'Hasil ' + e.target.naturalWidth + '×' + e.target.naturalHeight; };
+  }
+  el.result.hidden = false;
+  el.result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+
+<script>
+/* Demo di bagian atas: gambar dibuat lewat canvas, kiri versi 64×40 piksel, kanan versi penuh. */
+(function () {
+  const demo = document.getElementById('demo');
+  const W = 960, H = 600;
+
+  function scene(g, w, h) {
+    const sky = g.createLinearGradient(0, 0, 0, h * 0.75);
+    sky.addColorStop(0, '#2A1A6E'); sky.addColorStop(0.55, '#B5308C'); sky.addColorStop(1, '#FF9A62');
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * w, y = rnd() * h * 0.36, r = (0.6 + rnd() * 1.2) * h / 600;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+
+    const sx = w * 0.68, sy = h * 0.5, sr = h * 0.16;
+    const sg = g.createRadialGradient(sx, sy, 0, sx, sy, sr);
+    sg.addColorStop(0, '#FFF6CC'); sg.addColorStop(1, '#FFB86B');
+    g.fillStyle = sg; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.fill();
+
+    function ridge(base, amp, freq, phase, color) {
+      g.fillStyle = color; g.beginPath(); g.moveTo(0, h);
+      const step = Math.max(1, w / 120);
+      for (let x = 0; x <= w; x += step) {
+        const t = x / w;
+        const y = h * base - amp * h * (Math.abs(Math.sin(t * freq + phase)) * 0.7 + Math.sin(t * freq * 2.3 + phase * 2) * 0.3);
+        g.lineTo(x, y);
+      }
+      g.lineTo(w, h); g.closePath(); g.fill();
+    }
+    ridge(0.68, 0.14, 7, 1, '#4A2A86');
+    ridge(0.76, 0.12, 5, 3, '#2F1B63');
+    ridge(0.85, 0.08, 9, 5, '#1B1142');
+
+    /* detail halus: hilang saat piksel dibesarkan */
+    const lw = Math.max(0.3, h * 0.004);
+    g.lineWidth = lw; g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,255,255,.9)';
+    for (let i = 0; i < 6; i++) {
+      const bx = w * (0.28 + i * 0.045), by = h * (0.16 + (i % 3) * 0.05), s = h * 0.018;
+      g.beginPath(); g.moveTo(bx - s, by - s * 0.5); g.quadraticCurveTo(bx - s * 0.3, by - s, bx, by);
+      g.quadraticCurveTo(bx + s * 0.3, by - s, bx + s, by - s * 0.5); g.stroke();
+    }
+    g.strokeStyle = '#0C0724';
+    const ax = w * 0.2;
+    g.beginPath(); g.moveTo(ax, h * 0.5); g.lineTo(ax, h * 0.73); g.stroke();
+    for (let i = 0; i < 4; i++) {
+      const yy = h * (0.54 + i * 0.045), half = h * (0.03 - i * 0.004);
+      g.beginPath(); g.moveTo(ax - half, yy); g.lineTo(ax + half, yy); g.stroke();
+    }
+    g.strokeStyle = 'rgba(255,196,120,.85)';
+    for (let i = 0; i < 16; i++) {
+      const yy = h * (0.88 + i * 0.007), half = h * (0.14 - i * 0.006) * (1 + (i % 2) * 0.3);
+      g.beginPath(); g.moveTo(sx - half, yy); g.lineTo(sx + half, yy); g.stroke();
+    }
+  }
+
+  scene(document.getElementById('demo-sharp').getContext('2d'), W, H);
+  const small = document.createElement('canvas');
+  small.width = 64; small.height = 40;
+  scene(small.getContext('2d'), 64, 40);
+  const pg = document.getElementById('demo-pixel').getContext('2d');
+  pg.imageSmoothingEnabled = false;
+  pg.drawImage(small, 0, 0, W, H);
+
+  const range = demo.querySelector('input');
+  const setPos = (v) => { demo.style.setProperty('--pos', v + '%'); range.value = v; };
+  let raf = 0, touched = false;
+  range.addEventListener('input', () => { touched = true; cancelAnimationFrame(raf); demo.style.setProperty('--pos', range.value + '%'); });
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setPos(50); return; }
+  const t0 = performance.now(), D = 1600;
+  setPos(6);
+  const step = (t) => {
+    if (touched) return;
+    const p = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - p, 3);
+    setPos(6 + 44 * e);
+    if (p < 1) raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "jernih",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web untuk meng-HD-kan foto dan video: HD biasa, UHD, dan HD asli dengan API AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
+  }
+}
